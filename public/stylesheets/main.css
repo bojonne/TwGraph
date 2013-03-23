@@ -1,0 +1,87 @@
+.bar{
+	text-align: center;
+	background: #4387E9;
+	border-top: 1px solid #333333;
+	border-left: 1px solid #333333;
+	border-right: 1px solid #333333;
+	border-bottom: 1px solid #333333;
+	border-radius: 0em;
+	width: 100%;
+	padding: 0px;
+	margin: 0px;
+	position: relative;
+	z-index: 0;
+	box-shadow:0 5px 2px 0px rgba(0, 0, 0, 0.3);
+
+}
+
+.bar2{
+	position: relative;
+	z-index: 0;
+	box-shadow:0 4px 2px 0px rgba(0, 0, 0, 0.3);
+  color: #ffffff;
+  border-radius: 4px;
+  padding: 1px 12px;
+  margin-bottom: 5px;
+  text-align: center;
+  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.75);
+  text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.25);
+  background-color: #006dcc;
+  *background-color: #0044cc;
+  background-image: -moz-linear-gradient(top, #0088cc, #0044cc);
+  background-image: -webkit-gradient(linear, 0 0, 0 100%, from(#0088cc), to(#0044cc));
+  background-image: -webkit-linear-gradient(top, #0088cc, #0044cc);
+  background-image: -o-linear-gradient(top, #0088cc, #0044cc);
+  background-image: linear-gradient(to bottom, #0088cc, #0044cc);
+  background-repeat: repeat-x;
+  border-color: #0044cc #0044cc #002a80;
+  border-color: rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.25);
+  filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#ff0088cc', endColorstr='#ff0044cc', GradientType=0);
+  filter: progid:DXImageTransform.Microsoft.gradient(enabled=false);
+
+  border: 1px solid #bbbbbb;
+  *border: 0;
+  border-color: #e6e6e6 #e6e6e6 #bfbfbf;
+  border-color: rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.25);
+  border-bottom-color: #a2a2a2;
+  *zoom: 1;
+}
+.messagebox{
+	background-color: darkgray;
+	border: 1px solid #333333;
+	border-top: 1px solid #333333;
+	border-left: 1px solid #333333;
+	border-right: 1px solid #333333;
+	border-bottom: 1px solid #333333;
+	border-radius: 0px;
+	width: 100%;
+	height: 430px;
+	margin: 0px;
+	overflow-y: scroll;
+	position: relative;
+	//box-shadow:4px 5px 2px 0px rgba(0, 0, 0, 0.3) inset;
+}
+
+.twit {
+	font-size: 10px;
+	background-color: #FFF;
+	text-align: left;
+	width: 100%;
+}
+
+.user {
+	font-size: 16px;
+	font-weight: bold;
+	color: white;
+	background: gray;
+	text-align: left;
+	width: 100%;
+}
+
+.notice{
+	font-size: 14px;
+	font-style: oblique;
+	background-color: lightyellow;
+	text-align: center;
+	width: 100%;
+}

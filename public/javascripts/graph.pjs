@@ -1,0 +1,713 @@
+﻿// graph
+// Code from Visualizing Data, First Edition, Copyright 2008 Ben Fry.
+// Based on the GraphLayout example by Sun Microsystems.
+
+int nodeCount;
+int edgeCount;
+int tweetCount;
+int mentionCount;
+Node[] nodes = new Node[100];
+Tweet[] tweets = new Tweet[1000];
+Mention[] mentions = new Tweet[1000];
+Edge[] edges = new Edge[500];
+
+HashMap nodeTable = new HashMap();
+HashMap labelToId = new HashMap();
+HashMap exEdge = new HashMap();
+//HashSet exNode = new HashSet();
+
+//int zoom = 1;
+//int res_w = 960;
+//double windowPer = 0.6;
+int res_w = 720;
+int res_h = 480;
+int zoom = 1.1;
+int lendef = 270;
+int transX = 0;
+int transY = 0;
+float fadeInfo = 100;
+float fadeOpacity;
+float defScale = 0.6;
+float scaleSize = defScale;
+float edgeScale = 5;
+boolean balloon = true;
+boolean arrow = true;
+boolean nowExtend = false;
+boolean extendComp = false;
+String extendUser;
+
+static final color nodeColor   = #4387E9;
+static final color textColor   = #FFFFFF;
+static final color strokeColor = #342659;
+static final color selectColor = #FF3030;
+static final color fixedColor  = #FF8080;
+static final color scoreColor  = #167c54;
+//static final color edgeColor = #000000;
+
+//画像ディレクトリ指定
+string imgdir = "./public/images/";
+
+//画面中央に表示されるノードを指定
+string centerLabel;
+
+PFont font;
+PImage bl;
+PImage bg;
+
+void external() {
+	extendGraph(137607113 , "sonoshou");
+	//labelToId.put("qwerty",400);
+	//labelToId.put("a01saru",700);
+
+	//addEdge("ccr4700","a01saru");
+	//addEdge("sonoshou","qwerty");
+}
+
+void extGraph(id, user){
+	nowExtend = true;
+	extendUser = user;
+	extendGraph(id, user);
+}
+
+void endExtend(){
+	nowExtend = false;
+	extendComp = true;
+}
+
+void exAddNode(String fromLabel, String toLabel) {
+	labelToId.put(fromLabel,200);
+	addEdge(fromLabel,toLabel,1);
+}
+
+void dxAddNode(String label, String imgUrl){
+	labelToId.put(label,imgUrl);
+	addNode(label);
+	//alert("url#" + imgUrl);
+}
+
+//キャンパス生成時のセットアップ
+void setup() {
+	//size(res_w, res_h);
+	centerLabel = account.toLowerCase();
+	loadData();
+	font = createFont("Arial", 10);
+	textFont(font);
+	smooth();
+	bl = loadImage(imgdir + "balloon.png");
+}
+
+
+void loadData() {
+
+}
+
+
+void addEdge(String fromLabel, String toLabel, int exWeight) {
+	Node from = findNode(fromLabel);
+	Node to = findNode(toLabel);
+	String edgeName = fromLabel+"@"+toLabel;
+	Edge e =  (Edge) exEdge.get(edgeName);
+	if(e == null){
+		e = new Edge(from, to, exWeight);
+		if (edgeCount == edges.length) {
+			edges = (Edge[]) expand(edges);
+		}
+		exEdge.put(edgeName,e);
+		edges[edgeCount++] = e;
+	}else{
+		e = (Edge) exEdge.get(edgeName);
+		e.score += exWeight*edgeScale;
+	}
+}
+
+void addTweet(String label, String tweet){
+	label = label.toLowerCase();
+	Node user = findNode(label);
+	Tweet t = new Tweet(user,tweet);
+	if (tweetCount == tweets.length) {
+		tweets = (Tweet[]) expand(tweets);
+	}
+	tweets[tweetCount++] = t;
+}
+
+void addMention(String fromLabel, String toLabel){
+	fromLabel = fromLabel.toLowerCase();
+	toLabel = toLabel.toLowerCase();
+	Node from = findNode(fromLabel);
+	Node to = findNode(toLabel);
+	Mention m = new Mention(from,to);
+	if (mentionCount == mentions.length) {
+		mentions = (Mention[]) expand(mentions);
+	}
+	mentions[mentionCount++] = m;
+}
+
+Node findNode(String label) {
+	label = label.toLowerCase();
+	Node n = (Node) nodeTable.get(label);
+	if (n == null) {
+		return addNode(label);
+	}
+	return n;
+}
+
+Node addNode(String label) {
+	Node n = (Node) nodeTable.get(label);
+	if(n == null){
+		n = new Node(label);
+		if (nodeCount == nodes.length) {
+			nodes = (Node[]) expand(nodes);
+		}
+		nodeTable.put(label, n);
+		nodes[nodeCount++] = n;
+	}
+	return n;
+}
+
+void draw() {
+	//キャンパス背景透過指定
+	background(0, 0);
+
+	//ウィンドウサイズに合わせてキャンパスサイズを変更
+	if(res_w!=canvas.innerWidth()){
+		res_w=canvas.innerWidth();
+		size(res_w, res_h);
+	}
+
+	//ノード、エッジの更新、ツイート表示処理
+	for (int i = 0 ; i < edgeCount ; i++) {
+		edges[i].relax();
+	}
+	for (int i = 0 ; i < edgeCount ; i++) {
+		edges[i].update();
+	}
+	for (int i = 0; i < nodeCount; i++) {
+		nodes[i].relax();
+	}
+	for (int i = 0; i < nodeCount; i++) {
+		nodes[i].update();
+	}
+	for (int i = 0 ; i < edgeCount ; i++) {
+		edges[i].draw();
+	}
+	for (int i = 0 ; i < nodeCount ; i++) {
+		nodes[i].draw();
+	}
+	for (int i = 0 ; i < tweetCount ; i++) {
+		tweets[i].draw();
+	}
+	for (int i = 0 ; i < mentionCount ; i++) {
+		mentions[i].draw();
+	}
+
+	strokeWeight(2);
+	stroke(strokeColor);
+	if(arrow == true){
+		fill(#AAEEAA);
+		rect(res_w-100-transX, res_h-20-transY, 20, 20);
+	}else{
+		fill(#FFFFFF);
+		rect(res_w-100-transX, res_h-20-transY, 20, 20);
+	}
+	fill(#FFFFFF);
+	rect(res_w-80-transX, res_h-20-transY, 20, 20);
+	if(balloon == true){
+		fill(#AAEEAA);
+		rect(res_w-60-transX, res_h-20-transY, 20, 20);
+	}else{
+		fill(#FFFFFF);
+		rect(res_w-60-transX, res_h-20-transY, 20, 20);
+	}
+	fill(#FFFFFF);
+	rect(res_w-40-transX, res_h-20-transY, 20, 20);
+	rect(res_w-20-transX, res_h-20-transY, 20, 20);
+
+	textAlign(CENTER, CENTER);
+	fill(#000000);
+	textSize(16);
+	text("@", res_w-90-transX, res_h-10-transY);
+	text("R", res_w-70-transX, res_h-10-transY);
+	textSize(24);
+	text("+", res_w-30-transX, res_h-10-transY);
+	text("-", res_w-10-transX, res_h-10-transY);
+
+	image(bl, res_w-58-transX, res_h-17-transY, 15, 15);
+
+
+	//周辺グラフ拡張時の情報表示
+	if(nowExtend){
+		textSize(14);
+		int shadow = 2;
+		String extendInfo = "@" + extendUser + " の周辺ユーザ情報取得中…";
+		fill(#dcf404);
+		rect(0-transX,0-transY,textWidth(extendInfo)+4,28+4);
+		fill(#a48f02, 150);
+		text(extendInfo,textWidth(extendInfo)/2+shadow-transX,14+shadow-transY);
+		fill(#000000);
+		text(extendInfo,textWidth(extendInfo)/2-transX,14-transY);
+	}
+	if(extendComp){
+		//透過度減退処理
+		fadeOpacity = fadeInfo/100;
+		if(fadeInfo > 0){
+			//透過度が正の時
+			fadeInfo -= 2;
+			textSize(14);
+			stroke(strokeColor,fadeOpacity*255);
+			int shadow = 2;
+			String extendInfo = "@" + extendUser + " の周辺ユーザ情報取得中…";
+			fill(#6fb7ff,fadeOpacity*255);
+			rect(0-transX,0-transY,textWidth(extendInfo)+4,28+4);
+			fill(#a48f02,fadeOpacity*150);
+			text("周辺ユーザ情報取得完了！",textWidth(extendInfo)/2+shadow-transX,14+shadow-transY);
+			fill(#000000,fadeOpacity*255);
+			text("周辺ユーザ情報取得完了！",textWidth(extendInfo)/2-transX,14-transY);
+		}else{
+			fadeInfo = 100;
+			extendComp = false;
+		}
+	}
+
+
+}
+
+Node selection;
+
+void mousePressed() {
+
+	//拡大縮小処理
+	if(mouseX >= res_w - 40 && mouseX < res_w-20 && mouseY >= res_h-20){
+
+		scaleSize *= zoom
+		for (int i = 0; i < nodeCount; i++) {
+			nodes[i].x -=  (1*zoom - 1) * res_w / 2 / scaleSize;
+			nodes[i].y -=  (1*zoom - 1) * res_h / 2 / scaleSize;
+		}
+	}else if(mouseX >= res_w - 20 && mouseX < res_w && mouseY >= res_h-20){
+		scaleSize = scaleSize / zoom;
+
+		for (int i = 0; i < nodeCount; i++) {
+			nodes[i].x += (1 - 1/zoom) * res_w / 2 / scaleSize;
+			nodes[i].y += (1 - 1/zoom) * res_h / 2 / scaleSize;
+		}
+	//拡大率リセット処理
+	}else if(mouseX >= res_w - 80 && mouseX < res_w-60 && mouseY >= res_h-20){
+		scaleSize = defScale;
+		for (int i = 0; i < nodeCount; i++){
+			if(nodes[i].label.equals(centerLabel.toLowerCase())){
+				nodes[i].x =  res_w/2/defScale;
+				nodes[i].y =  res_h/2/defScale;
+			}else{
+				nodes[i].x = nodes[i].defX;
+				nodes[i].y = nodes[i].defY;
+			}
+		}
+		translate(-transX,-transY);
+		transX = 0;
+		transY = 0;
+
+	//ツイート表示処理
+	}else if(mouseX >= res_w - 60 && mouseX < res_w - 40 && mouseY >= res_h-20){
+		balloon = !balloon;
+
+		/* テスト用。ボタンを押すごとに透過度リセット
+		if(balloon == false){
+			for (int i = 0 ; i < tweetCount ; i++) {
+				tweets[i].fade = 100;
+			}
+		}
+		*/
+
+	}
+
+	//メンションツイートアニメーション処理
+	else if(mouseX >= res_w - 100 && mouseX < res_w - 80 && mouseY >= res_h-20){
+		arrow = !arrow;
+	}
+
+	// Ignore anything greater than this distance
+	float closest = 60*scaleSize;
+	for (int i = 0; i < nodeCount; i++) {
+		Node n = nodes[i];
+		float d = dist(mouseX-transX, mouseY-transY, n.x*scaleSize, n.y*scaleSize);
+		if (d < closest) {
+			if (mouseButton == RIGHT){
+				if(!n.label.equals(centerLabel.toLowerCase()) && !nowExtend){
+					nowExtend = true;
+					extendUser = n.label;
+					extendGraph(accountId, n.label);
+					n.fixed = true;
+				}
+			}else{
+				selection = n;
+				closest = d;
+			}
+		}
+	}
+}
+
+
+void mouseDragged() {
+	if (selection != null) {
+		selection.x = (mouseX-transX)/scaleSize;
+		selection.y = (mouseY-transY)/scaleSize;
+	}else{
+		int dx = mouseX - pmouseX;
+		int dy = mouseY - pmouseY;
+		transX += dx;
+		transY += dy;
+		translate(dx,dy);
+	}
+}
+
+
+void mouseReleased() {
+	selection = null;
+}
+
+// Edge.pde
+// Code from Visualizing Data, First Edition, Copyright 2008 Ben Fry.
+// Based on the GraphLayout example by Sun Microsystems.
+
+class Edge {
+	Node from;
+	Node to;
+	float len;
+	float dx, dy, a, b, t, tx, ty, d, cx, cy;
+	int count;
+	int score;
+	int edgeWeight;
+	color edgeColor;
+	boolean touch = false;
+
+	Edge(Node from, Node to, int weight) {
+		this.from = from;
+		this.to = to;
+		this.len = lendef;
+		//alert(weight);
+		if(weight != 0){
+			this.score = weight*edgeScale;
+		}else{
+			this.score = random(100);
+		}
+	}
+
+	void relax() {
+	//if(!from.label.equals(centerLabel.toLowerCase()) && !to.label.equals(centerLabel.toLowerCase())){
+		float vx = (to.x - from.x)*scaleSize;
+		float vy = (to.y - from.y)*scaleSize;
+		float d = mag(vx, vy);
+		if (d > 0) {
+		  float f = (len*scaleSize - d) / (d * 3);
+		  float dx = f * vx;
+		  float dy = f * vy;
+		  to.dx += dx;
+		  to.dy += dy;
+		  from.dx -= dx;
+		  from.dy -= dy;
+		}
+	//}
+	}
+
+	//エッジに触るとエッジが大きくなる
+	void update() {
+		cx = (from.x + to.x)*scaleSize/2;
+		cy = (from.y + to.y)*scaleSize/2;
+		dx = (from.x - to.x)*scaleSize;
+		dy = (from.y - to.y)*scaleSize;
+
+		//点と線の距離
+		a = dx*dx + dy*dy;
+		b = dx * (to.x*scaleSize - mouseX + transX) + dy * (to.y*scaleSize - mouseY + transY);
+		t = -1 * b / a;
+		if (t < 0) t = 0;
+		if (t > 1) t = 1;
+		tx = to.x*scaleSize + dx * t;
+		ty = to.y*scaleSize + dy * t;
+		d = sqrt((mouseX - transX - tx)*(mouseX - transX - tx) + (mouseY - transY - ty)*(mouseY - transY - ty));
+
+		if(abs(d) < edgeWeight/2){
+			edgeWeight = score/5;
+			edgeColor = #ff8000;
+			touch = true;
+		}else{
+			edgeWeight = score/8;
+			edgeColor = #000000;
+			touch = false;
+		}
+	}
+
+	void draw() {
+		stroke(edgeColor);
+		//エッジの太さ
+		//strokeWeight(0.35);
+		strokeWeight(edgeWeight*scaleSize);
+		//strokeWeight(score/10);
+		line(from.x*scaleSize, from.y*scaleSize, to.x*scaleSize, to.y*scaleSize);
+
+		//スコアの表示部分
+		if(touch){
+			textSize(16*scaleSize);
+			float r = max(textWidth(score/edgeScale)*2,edgeWeight*scaleSize*2);
+			noStroke();
+			fill(scoreColor);
+			ellipse(cx,cy,r,r);
+
+			fill(textColor);
+			text(score/edgeScale,cx,cy);
+		}
+	}
+}
+
+// Node.pde
+// Code from Visualizing Data, First Edition, Copyright 2008 Ben Fry.
+// Based on the GraphLayout example by Sun Microsystems.
+
+class Node {
+	String imgUrl; //ノード作成時にTwitterプロフィール画像URLを取得
+	float x, y, defX, defY;
+	float dx, dy;
+	boolean fixed;
+	String label;
+	PImage img;
+
+	Node(String label) {
+		this.label = label;
+		this.imgUrl = (String)labelToId.get(label);
+		if(label.equals(centerLabel.toLowerCase())){
+			x = res_w/2/defScale;
+			y = res_h/2/defScale;
+			this.fixed = true;
+		}else{
+			x = random(res_w);
+			defX = x;
+			y = random(res_h);
+			defY = y;
+		}
+		//読み込む画像の指定
+		//alert("http://" + imgUrl);
+		img = loadImage("http://" + imgUrl);
+		//img = loadImage(imgdir + id + ".png");
+		//img = loadImage("http://www.google.co.jp/intl/ja_ALL/images/logos/images_logo_sm.gif");
+	}
+
+	void relax() {
+		float ddx = 0;
+		float ddy = 0;
+
+		for (int j = 0; j < nodeCount; j++) {
+			Node n = nodes[j];
+			if (n != this) {
+				float vx = x*scaleSize - n.x*scaleSize;
+				float vy = y*scaleSize - n.y*scaleSize;
+				float lensq = vx * vx + vy * vy;
+				if (lensq == 0) {
+					ddx += random(1);
+					ddy += random(1);
+				} else if (lensq < 100*100) {
+					ddx += vx / lensq;
+					ddy += vy / lensq;
+				}
+			}
+		}
+		float dlen = mag(ddx, ddy) / 2;
+		if (dlen > 0) {
+			dx += ddx / dlen;
+			dy += ddy / dlen;
+		}
+	}
+
+	void update() {
+		if (!fixed) {
+			y += constrain(dy, -5, 5);
+			x += constrain(dx, -100, 100);
+			//x += constrain(dx, -4*scaleSize, 4*scaleSize);
+			//y += constrain(dy, -4*scaleSize, 4*scaleSize);
+			x = constrain(x, 0, res_w/scaleSize);
+			y = constrain(y, 0, res_h/scaleSize);
+		}
+		dx /= 2;
+		dy /= 2;
+	}
+
+	void draw() {
+		if (selection == this) {
+			fill(selectColor);
+		} else if (fixed) {
+			fill(fixedColor);
+		} else {
+			fill(nodeColor);
+		}
+
+		textSize(16*scaleSize);
+		stroke(strokeColor);
+		//stroke(0);
+		strokeJoin(ROUND);
+		//strokeWeight(0.5);
+		strokeWeight(2*scaleSize);
+
+		rectMode(CORNER);
+		//float w = max(textWidth(label) + 82, 120)*scaleSize;
+		//float h = textAscent() + textDescent() + 4;
+		float w = max(textWidth(label)*2.2, 120*scaleSize);
+		float h = 52*scaleSize;
+		rect(x*scaleSize - w/2, y*scaleSize - h/2, w, h);
+
+		//アイコンの表示．縦横48x48を想定
+		image(img, x*scaleSize - w/2 + 2*scaleSize, y*scaleSize - h/2 + 2*scaleSize, 48*scaleSize, 48*scaleSize);
+		textAlign(CENTER, CENTER);
+
+		fill(textColor);
+		text(label, (x+48/2)*scaleSize, y*scaleSize);
+	}
+
+}
+
+class Tweet {
+	Node user;
+	String tweet;
+	//String label;
+	//boolean mention;
+	//boolean retweet;
+
+	//吹き出しの初期透明度パラメータ
+	float fade = 100;
+
+	//吹き出しの透過スピード
+	float fd = 0.2;
+
+	//メンションアニメーションのパラメータ
+	float ar = 0;
+	float t = 0.05;
+
+	//コンストラクタ
+	Tweet(Node user, String tweet) {
+		this.user = user;
+		this.tweet = tweet;
+	}
+
+	//描画処理
+	void draw() {
+		float sx, sy, rx, ry;
+		float opacity ;
+
+		//透過度減退処理
+		opacity = fade/100;
+		if(fade > 0){
+			//透過度が正の時
+			fade -= fd;
+
+			if(balloon == true){
+								noStroke();
+				fill(#af145e, 255*opacity); //臙脂色
+
+				if(scaleSize > 0.8){
+					textSize(16*scaleSize);
+					rw = textWidth(tweet)*1.2;
+					rh = 40*scaleSize;
+					sx = (user.x*scaleSize-textWidth(tweet)/2);
+					sy = (user.y-80)*scaleSize;
+					tx = user.x*scaleSize;
+					ty = user.y*scaleSize;
+					triangle(tx-15*scaleSize,ty-rh,tx,ty-rh/2-5*scaleSize,tx+15*scaleSize,ty-rh);
+				}else{
+					textSize(16*0.8);
+					rw = textWidth(tweet)*1.2;
+					rh = 40*0.8;
+					sx = (user.x*scaleSize-textWidth(tweet)/2);
+					sy = (user.y*scaleSize-52*scaleSize-rh);
+					tx = user.x*scaleSize;
+					ty = user.y*scaleSize;
+					triangle(tx-15*0.8,ty-52*scaleSize,tx,ty-rh/2*scaleSize-5*scaleSize,tx+15*0.8,ty-52*scaleSize);
+
+				}
+
+				rect(sx, sy, rw, rh);
+
+				fill(textColor,255*opacity);
+				//text("@" + user.label+": "+tweet, sx, sy, rw, rh);
+				text(tweet, sx, sy, rw, rh);
+			}
+
+			//メンションだった場合、メンションアニメーションを動かす。
+			/*
+			if(mention == true && arrow == true){
+				float lx,ly,mx,my;
+				lx = from.x*scaleSize+(to.x*scaleSize - from.x*scaleSize)*ar;
+				ly = from.y*scaleSize+(to.y*scaleSize - from.y*scaleSize)*ar;
+				mx = from.x*scaleSize+(to.x*scaleSize - from.x*scaleSize)*(ar+t);
+				my = from.y*scaleSize+(to.y*scaleSize - from.y*scaleSize)*(ar+t);
+
+				strokeWeight(10);
+				stroke(#ff84ff);
+				//line(0,0,100,200);
+				line(lx, ly, mx, my);
+				if(ar < 0.8) {
+					ar += t/2;
+				}else{
+					ar = 0;
+				}
+			}
+			*/
+
+		}else{
+			//透過度が0以下になった時
+			fade = 0;
+			//balloon = false;
+		}
+	}	//描画ここまで
+}
+
+class Mention {
+	Node from;
+	Node to;
+
+	//初期透明度パラメータ
+	float fade = 100;
+
+	//透過スピード
+	float fd = 0.2;
+
+	//メンションアニメーションの初期位置・速度パラメータ
+	float ar = 0;
+	float t = 0.05;
+
+	//コンストラクタ
+	Mention(Node from, Node to) {
+		this.from = from;
+		this.to = to;
+	}
+
+	//描画処理
+	void draw() {
+		float opacity ;
+
+		//透過度減退処理
+		opacity = fade/100;
+
+		if(fade > 0){
+			//透過度が正の時
+			fade -= fd;
+			if(arrow == true){
+				float lx,ly,mx,my;
+				lx = from.x*scaleSize+(to.x*scaleSize - from.x*scaleSize)*ar;
+				ly = from.y*scaleSize+(to.y*scaleSize - from.y*scaleSize)*ar;
+				mx = from.x*scaleSize+(to.x*scaleSize - from.x*scaleSize)*(ar+t);
+				my = from.y*scaleSize+(to.y*scaleSize - from.y*scaleSize)*(ar+t);
+
+				strokeWeight(10);
+				stroke(#ff84ff,255*opacity);
+				//line(0,0,100,200);
+				line(lx, ly, mx, my);
+				if(ar < 0.8) {
+					ar += t/2;
+				}else{
+					ar = 0;
+				}
+			}
+		}else{
+			//透過度が0以下になった時
+			fade = 0;
+		}
+	}	//描画ここまで
+}

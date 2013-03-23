@@ -1,0 +1,325 @@
+#{extends 'main.html' /} #{set title:'Twitter Mention Graph' /} #{if
+!isLoggedIn}
+<a href="@{Application.login()}">Sign in with Twitter</a>
+#{/if} #{else}
+
+#{/else}
+
+<!-- 以下ログインが成功した場合 -->
+<div class="navbar navbar-inverse navbar-fixed-top"
+	style="box-shadow: 0 4px 4px 4px rgba(0, 0, 0, 0.3);">
+	<div class="navbar-inner">
+		<div class="container">
+			<a class="btn btn-navbar" data-toggle="collapse"
+				data-target=".nav-collapse"> <span class="icon-bar"></span> <span
+				class="icon-bar"></span> <span class="icon-bar"></span>
+			</a> <a class="brand" href="#">TwiGraph</a>
+			<div class="nav-collapse collapse">
+				<ul class="nav">
+					<li class="active"><a href="#">Home</a></li>
+					<li><a href="#about">About</a></li>
+					<li><a href="#contact">Contact</a></li>
+				</ul>
+				<a href="@{Application.logout()}" class="btn btn-primary">Logout</a>
+			</div>
+			<!--/.nav-collapse -->
+		</div>
+	</div>
+</div>
+
+<style>
+#messages {
+	border: 1px solid;
+	overflow-y: scroll;
+	height: 480px;
+	width: 640px;
+}
+</style>
+
+<!--
+
+<div id="newMessage">
+	<input type="text" id="message" autocomplete="off"> <input
+		type="submit" value="send" id="send">
+</div>
+
+<div class="content">
+    <div id="messages"></div>
+</div>
+
+ -->
+
+<div class="container">
+
+	<div class="page-header">
+    	<h1>Welcome to TwiGraph! <small>@${account?.userName}</small><img src=${account?.profileImgUrl} alt="プロフィール画像" width=48 height=48></h1>
+    	<!-- ${account?.twitterId} -->
+    </div>
+
+	<div class="row">
+		<div class="span12">
+			<p><button id="debug" class="btn btn-inverse">Debug Menu<i class="icon-wrench icon-white"></i></button></p>
+			<!--
+			<div class="span12">
+				<input type="button" class="btn btn-primary" value="外部ボタン処理テスト" onClick="test()">
+			</div>
+			-->
+			<div class="span10" id="debugForm" style="display: none;">
+				<ul class="nav nav-pills nav-stacked">
+					<li class="active"><a style="background: gray;">ノード・エッジ追加テスト</a></li>
+				</ul>
+				<form name="addNode" class="form-inline">
+					<label>新規ノード</label>
+					<input id="fromNode" value="charlie_1219" class="input-medium" type=text>
+					<label>接続先ノード</label>
+					<input id="toNode" value="${account?.userName}" class="input-medium" type=text>
+					<input type="button" class="btn btn-primary" value="addNode" onClick="test2()">
+				</form>
+				<ul class="nav nav-pills nav-stacked">
+					<li class="active"><a style="background: gray;">ツイート追加テスト</a></li>
+				</ul>
+				<form name="tweetTest" class="form-inline">
+					<label>発言ユーザ</label>
+					<input id="tweetUser" value="${account?.userName}" class="input-medium" type=text>
+					<label>ツイート内容</label>
+					<input id="tweet" value="ツイートするお" type=text>
+					<input type="button" class="btn btn-primary" value="addtweet" onClick="test4()">
+				</form>
+				<ul class="nav nav-pills nav-stacked">
+					<li class="active"><a style="background: gray;">メンション追加テスト</a></li>
+				</ul>
+				<form name="mentionTest" class="form-inline">
+					<label>発言ユーザ</label>
+					<input id="fromUser" class="input-medium" value="${account?.userName}" type=text>
+					<label>メンション先ユーザ</label>
+					<input id="toUser" class="input-medium" value="" type=text>
+					<input type="button" class="btn btn-primary" value="addMention" onClick="test5()">
+				</form>
+					<!--
+					<form name="extNode">
+						oauthID：<input id="oauthId" value="${account?.twitterId}" type=text>
+						拡張するユーザ：<input id="user" value="" type=text>
+						<input type="button" value="extNode" onClick="test3()">
+					</form>
+					 -->
+
+			</div>
+		</div>
+
+
+		<div class="span9 drawbox" style="textalign: center;">
+			<canvas id="processing" datasrc="@{'/public/javascripts/graph.pjs'}"
+				style="border: 2px solid #333333; border-radius: 0.5em; background-image: url(./public/images/bg_24_9.gif);"></canvas>
+		</div>
+		<div class="span3" style="">
+			<div class="bar2">
+				<h4 style="color: #ffffff">Twitter Activity</h4>
+			</div>
+			<div class="messagebox">
+				<!--
+					<div class="user">ツイッターあれこれ</div>
+					<div class="twit">何か動きがあったら＋</div>
+				 -->
+				<div id="thread">
+					<script type="text/x-jquery-tmp" id="message_tmpl">
+		<% if(event.type == 'edge') { %>
+		<% } %>
+		<% if(event.type == 'message') { %>
+			<div class="message <%= event.user == '${user}' ? 'you' : '' %>">
+				<div class="user">
+					<%= event.user %>
+				</div>
+				<div class="twit">
+					<%= event.text %>
+				</div>
+			</div>
+		<% } %>
+		<% if(event.type == 'join') { %>
+
+		<% } %>
+		<% if(event.type == 'leave') { %>
+
+        <% } %>
+        <% if(event.type == 'quit') { %>
+
+        <% } %>
+					</script>
+					<div class="notice">--Start to get Twitter info--</div>
+				</div>
+			</div>
+		</div>
+		<div class="span12"
+			style="text-shadow: 1px 1px 0 rgba(230, 230, 230, 1);">
+			<h2>How To Use</h2>
+			<p>＋ボタン，－ボタン … 縮尺を変更</p>
+			<p>Rボタン … 縮尺をリセット</p>
+			<p>吹きだしボタン … ツイート表示機能を有効にする(自動フェードアウト)</p>
+			<p>@ボタン … メンションアニメーションを有効にする</p>
+		</div>
+
+	</div>
+	<!-- row -->
+
+	<hr>
+	<footer>
+		<p>山名研究室プロジェクト研究 2012</p>
+	</footer>
+
+</div>
+<!-- /container -->
+
+<script language="JavaScript">
+			var canvas = $('div.drawbox');
+
+			var array = [];
+
+			var account = "${account.userName}";
+			var accountId = "${account?.twitterId}";
+
+			$( function() {
+			    $('#debug').click( function() {
+			        $('#debugForm').toggle( 'blind', '', 500 );
+			    } );
+			} );
+
+			#{list items:twlist, as:'str'}
+				array.push("${str}");
+			#{/list}
+
+			// Create a socket
+			var WS = window['MozWebSocket'] ? MozWebSocket : WebSocket;
+			var user = "test";
+			var socket = new WS("@@{Application.MentionSocket.join(user)}")
+
+			// Display a message
+			var display = function(event) {
+			    $('#thread').prepend(tmpl('message_tmpl', {event: event}));
+			   // $('#thread').scrollTo('max')
+			}
+
+			socket.onmessage = function(event) {
+				var typ = event.data.split(":")[0];
+				if(typ == 'edge'){
+					var parts = /^([^:]+):([^:]+):([^:]+)(:(.*))?$/.exec(event.data)
+					//alert(typ);
+			        //alert(parts[0]+"#"+parts[1]+"#"+parts[2]+"#"+parts[3]+"#"+parts[4]);
+			        addNewEdge(parts[2],parts[3],parts[5]);
+			        display({
+			            type: parts[1],
+			            from: parts[2],
+			            to: parts[3],
+			            weight: parts[5]
+			        })
+				}else if(typ == 'node'){
+					var parts = /^([^:]+):([^:]+)(:(.*))?$/.exec(event.data)
+					addNode(parts[2],parts[4]);
+					display({
+			            type: parts[1],
+			            from: parts[2],
+			            imgUrl: parts[4]
+			        })
+				}else if(typ == 'balloon'){
+					var parts = /^([^:]+):([^:]+)(:(.*))?$/.exec(event.data)
+					exAddBalloon(parts[2],parts[4]);
+					display({
+			            type: parts[1],
+			            userName: parts[2],
+			            text: parts[4]
+			        })
+				}else if(typ == 'mention'){
+					var parts = /^([^:]+):([^:]+)(:(.*))?$/.exec(event.data)
+					exAddMention(parts[2],parts[4]);
+					display({
+			            type: parts[1],
+			            fromUser: parts[2],
+			            toUser: parts[4]
+			        })
+				}else if(typ == 'endExtend'){
+					extendedGraph();
+				}else{
+					var parts = /^([^:]+):([^:]+)(:(.*))?$/.exec(event.data)
+			        //alert(parts[0]+"#"+parts[1]+"#"+parts[2]+"#"+parts[3]+"#"+parts[4]);
+			        display({
+			            type: parts[1],
+			            user: parts[2],
+			            text: parts[4]
+			        })
+				}
+
+		    }
+			/* no use
+		    $('#send').click(function(e) {
+		        var message = $('#message').val()
+		        $('#message').val('')
+		        socket.send(message)
+		    });
+
+		    $('#message').keypress(function(e) {
+		        if(e.charCode == 13 || e.keyCode == 13) {
+		            $('#send').click()
+		            e.preventDefault()
+		        }
+		    })*/
+
+			function test(){
+		    	var p = Processing.getInstanceById('processing');
+				p.external();
+			}
+			function test2(){
+				var p = Processing.getInstanceById('processing');
+				p.exAddNode(document.addNode.fromNode.value,document.addNode.toNode.value);
+			}
+			function test3(){
+				//alert("extGraph?--");
+				var p = Processing.getInstanceById('processing');
+				p.extGraph(document.extNode.oauthId.value,document.extNode.oauthId.user);
+				//window.location.href = "@{Application.extendGraph(accountId,"bojonne")}";
+			}
+			function test4(){
+				var p = Processing.getInstanceById('processing');
+				//alert(document.tweetTest.tweetUser.value + " # " + document.tweetTest.tweet.value);
+				p.addTweet(document.tweetTest.tweetUser.value,document.tweetTest.tweet.value);
+				//window.location.href = "@{Application.extendGraph(accountId,"bojonne")}";
+			}
+			function test5(){
+				var p = Processing.getInstanceById('processing');
+				p.addTweet(document.mentionTest.fromUser.value,"メンションテスト");
+				p.addMention(document.mentionTest.fromUser.value,document.mentionTest.toUser.value);
+				//window.location.href = "@{Application.extendGraph(accountId,"bojonne")}";
+			}
+
+			function addNewEdge(fromN,toN,eWeight){
+				var p=Processing.getInstanceById('processing');
+				p.addEdge(fromN,toN,eWeight);
+			}
+			function addNode(name,img){
+				var p=Processing.getInstanceById('processing');
+				//alert(name);
+				p.dxAddNode(name.toLowerCase(),img);
+			}
+			function exAddBalloon(userName,text){
+				//alert(userName+" # "+text);
+				var p=Processing.getInstanceById('processing');
+				p.addTweet(userName,text);
+			}
+			function exAddMention(fromUser,toUser){
+				//alert(fromUser+" # "+toUser);
+				var p=Processing.getInstanceById('processing');
+				p.addMention(fromUser,toUser);
+			}
+			/*
+			function exGraph(user){
+				//alert(user);
+			}
+			*/
+			function extendGraph(oauthId,userName){
+				 var callUrl = "@{Application.extendGraph()}?oauthId=" + oauthId + "&user=" + userName
+				 var req = new XMLHttpRequest();
+				 req.open('GET', callUrl, true);
+				 req.send(null);
+			}
+			function extendedGraph(){
+				var p=Processing.getInstanceById('processing');
+				p.endExtend();
+			}
+	</script>

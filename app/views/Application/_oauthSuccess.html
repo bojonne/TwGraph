@@ -1,0 +1,124 @@
+#{extends 'main.html' /}
+#{set title:'Twitter Mention Graph' /}
+
+#{if !isLoggedIn}
+  <a href="@{Application.login()}">Sign in with Twitter</a> 
+#{/if} 
+
+
+<!-- 以下ログインが成功した場合 -->
+<a href="@{Application.logout()}">Logout</a><br />
+<style>
+    #messages {
+        border: 1px solid;
+        overflow-y: scroll;
+        height: 480px;
+        width: 640px;
+    }
+</style>
+
+<div id="thread">
+    <script type="text/x-jquery-tmp" id="message_tmpl">
+        <% if(event.type == 'message') { %>
+            <div class="message <%= event.user == '${user}' ? 'you' : '' %>">
+                <h2><%= event.user %></h2>
+                <p>
+                    <%= event.text %>
+                </p>
+            </div>
+        <% } %>
+        <% if(event.type == 'join') { %>
+            <div class="message notice">
+                <h2></h2>
+                <p>
+                    <%= event.user %> joined the room
+                </p>
+            </div>
+        <% } %>
+        <% if(event.type == 'leave') { %>
+            <div class="message notice">
+                <h2></h2>
+                <p>
+                    <%= event.user %> left the room
+                </p>
+            </div>
+        <% } %>
+        <% if(event.type == 'quit') { %>
+            <div class="message important">
+                <h2></h2>
+                <p>
+                    You are now disconnected!
+                </p>
+            </div>
+        <% } %>
+    </script>
+</div>
+
+<div id="newMessage">
+    <input type="text" id="message" autocomplete="off">
+    <input type="submit" value="send" id="send">
+</div>
+
+<div class="content">
+    <div id="messages"></div>
+</div>
+    		
+	#{else}
+ 
+  	${account?.userName}<br /> 
+  	${account?.twitterId}<br />
+ 
+   #{/else}
+   
+   <script src="public/javascripts/processing-1.4.1.js"></script>
+   <script src="public/javascripts/jquery-1.7.1.min.js"></script>
+   <script language="JavaScript">
+			var array = [];
+			
+			var account = "${account.userName}";
+			#{list items:twlist, as:'str'}
+				array.push("${str}");
+			#{/list}
+			
+			// Create a socket
+			var WS = window['MozWebSocket'] ? MozWebSocket : WebSocket;
+			var user = "test";
+			var socket = new WS("@@{Application.MentionSocket.join(user)}")
+			    
+			// Display a message
+			var display = function(event) {
+			    $('#thread').append(tmpl('message_tmpl', {event: event}));
+			   // $('#thread').scrollTo('max')
+			}
+			
+			socket.onmessage = function(event) {
+		        var parts = /^([^:]+):([^:]+)(:(.*))?$/.exec(event.data)
+		        display({
+		            type: parts[1],
+		            user: parts[2],
+		            text: parts[4]
+		        })
+		    }
+		    
+		    $('#send').click(function(e) {
+		        var message = $('#message').val()
+		        $('#message').val('')
+		        socket.send(message)
+		    });
+		    
+		    $('#message').keypress(function(e) {
+		        if(e.charCode == 13 || e.keyCode == 13) {
+		            $('#send').click()
+		            e.preventDefault()
+		        }
+		    })
+
+			function test(){
+				var p=Processing.getInstanceById('processing');
+				p.external();
+			}
+			function test2(){
+				var p=Processing.getInstanceById('processing');
+				p.exAddNode(document.addNode.fromNode.value,document.addNode.toNode.value);
+			}
+	</script>
